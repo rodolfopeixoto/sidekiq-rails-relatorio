@@ -1,0 +1,44 @@
+version: '3'
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=
+    networks:
+      - appnetwork
+  web:
+    build: .
+    command: bundle exec rails s -p 3002 -b '0.0.0.0'
+    volumes:
+      - .:/jobs-rails
+    ports:
+      - "3002:3002"
+    depends_on:
+      - db
+    networks:
+      - appnetwork
+  redis:
+    image: 'redis'
+    command: redis-server
+  sidekiq:
+    build: .
+    command: bundle exec sidekiq
+    volumes:
+      - '.:/app'
+    depends_on:
+      - redis
+  sidekiq-web:
+    build: .
+    command: rackup config.ru -o 0.0.0.0 -p 3030 -q
+    volumes:
+      - '.:/app'
+    depends_on:
+      - redis
+      - sidekiq
+    ports:
+      - '3030:3030'
+
+networks:
+  appnetwork:
+    driver: bridge
